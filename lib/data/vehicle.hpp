@@ -1,6 +1,7 @@
 #include <chrono>
 #include <boost/property_tree/ptree.hpp>
 #include "quadtree.hpp"
+#include "cassandra.hpp"
 
 std::cout << std::fixed << std::setprecision(9) << std::left;
 
@@ -21,8 +22,8 @@ public:
     auto v = Vehicle.find(diag.vehicleId);
     if (!!v && Vehicle != diag)
     {
-      // todo - save v
       v.last_active_at_ = std::chrono::system_clock::now();
+      Cassandra.save(v);
     }
     else if (!!v)
       v.last_active_at_ = std::chrono::system_clock::now();

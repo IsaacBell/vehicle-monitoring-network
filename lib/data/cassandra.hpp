@@ -26,7 +26,7 @@ public:
     cass_cluster_free(cluster);
   }
 
-  void saveDiagnostic(const boost::property_tree::ptree &json, const std::string &keyspace, const std::string &table)
+  static void saveDiagnostic(const boost::property_tree::ptree &json, const std::string &keyspace, const std::string &table)
   {
     std::stringstream ss;
     boost::property_tree::write_json(ss, json);
@@ -49,12 +49,12 @@ public:
     cass_future_free(query_future);
   }
 
-  void insert(Vehicle &vehicle)
+  static void insert(Vehicle &vehicle)
   {
     const char *insert_query = "INSERT INTO vehicles (make, model) VALUES (?, ?)";
     CassStatement *insert_statement = cass_statement_new(insert_query, 2);
 
-    /* Create a vehicle object */
+    /* todo - Create a vehicle object */
     Vehicle v;
     v.make = "Toyota";
     v.model = "Camry";
