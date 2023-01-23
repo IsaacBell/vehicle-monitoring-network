@@ -1,0 +1,9 @@
+/Users/isaac/Documents/obd2-reader/lib/build/CMakeFiles/OBD2-Reader.dir
+/Users/isaac/Documents/obd2-reader/lib/build/CMakeFiles/edit_cache.dir
+/Users/isaac/Documents/obd2-reader/lib/build/CMakeFiles/rebuild_cache.dir
+/Users/isaac/Documents/obd2-reader/lib/build/data/CMakeFiles/Data.dir
+/Users/isaac/Documents/obd2-reader/lib/build/data/CMakeFiles/edit_cache.dir
+/Users/isaac/Documents/obd2-reader/lib/build/data/CMakeFiles/rebuild_cache.dir
+/Users/isaac/Documents/obd2-reader/lib/build/server/CMakeFiles/Server.dir
+/Users/isaac/Documents/obd2-reader/lib/build/server/CMakeFiles/edit_cache.dir
+/Users/isaac/Documents/obd2-reader/lib/build/server/CMakeFiles/rebuild_cache.dir
