@@ -6,6 +6,11 @@ Server code is in the lib/ folder.
 
 Embedded device code is in the arduino/ folder.
 
+## Environment Variables
+
+- CASSANDRA_HOST
+- CASSANDRA_PORT
+
 ## Dependendecies
 
 - C++ 2020

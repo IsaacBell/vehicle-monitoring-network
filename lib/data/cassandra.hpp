@@ -2,6 +2,11 @@
 #include "diagnostic.hpp"
 #include "vehicle.hpp"
 
+/*
+  auto db = Cassandra::get_instance();
+  auto db = Cassandra::get_instance<true>();
+*/
+
 template <bool isProd = false>
 class Cassandra
 {
@@ -45,6 +50,8 @@ public:
   }
 
 private:
+  std::string_view host;
+  std::string_view port;
   cqlpp::Session session_;
   cqlpp::Map<User> users_;
   cqlpp::Map<Diagnostics> diagnostics_;
@@ -53,11 +60,10 @@ private:
   Cassandra(const Cassandra &) = delete;
   Cassandra &operator=(const Cassandra &) = delete;
 
-  Cassandra(
-      const std::string host = getenv("CASSANDRA_HOST") || "127.0.0.1",
-      int port = getenv("CASSANDRA_PORT" || 9042))
+  Cassandra() : host_(getenv("CASSANDRA_HOST") || "127.0.0.1"),
+                port_(getenv("CASSANDRA_PORT" || 9042))
   {
-    session_.connect(host, port);
+    session_.connect(host_, port_);
 
     cqlpp::Map<User>
         users_;
