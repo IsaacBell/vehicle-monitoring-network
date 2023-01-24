@@ -18,6 +18,7 @@ class Server
 {
 public:
   Server(int port) : service_(), ep_(tcp::v4(), port), acc_(service_, ep_) {}
+  //                 ^ todo
 
   virtual ~Server() {}
 
@@ -27,13 +28,13 @@ public:
     {
       tcp::socket sock(service_);
       acc_.accept(sock);
-      std::thread(session, this, std::move(sock)).detach();
+      std::thread(session, this, std::move(sock)).detach(); // todo
     }
   }
   virtual void save(ptree const &payload) = 0;
 
 private:
-  static void session(Server *server, tcp::socket sock)
+  static void session(Server *server, tcp::socket sock) // todo
   {
     try
     {
@@ -57,6 +58,7 @@ private:
     catch (std::exception &e)
     {
       std::cerr << "Exception in thread: " << e.what() << "\n";
+      throw(e);
     }
   }
   io_service service_;
