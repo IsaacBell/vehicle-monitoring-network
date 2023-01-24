@@ -16,4 +16,6 @@ struct Diagnostic
   }
 
   bool save() { return Vehicle.save(this); }
+
+  // const std::pair<std::string_view, >;
 };

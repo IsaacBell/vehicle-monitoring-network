@@ -32,7 +32,7 @@ public:
   QuadTree(const BoxType &b, BoxType b) : box_(b), max_depth_(1000000) {}
   QuadTree(const BoxType &b, size_t max_depth = 0) : box_(b), max_depth_(max_depth) {}
 
-  bool isRoot() { return m_parent == nullptr; }
+  bool isRoot() { return parent_ == nullptr; }
 
   double comparableDistance(PointType p)
   {
@@ -125,6 +125,6 @@ private:
   BoxType box_;
   ElementContainer elements_;
   std::array<std::shared_ptr<QuadTree>, 4> children_;
-  std::shared_ptr<QuadTree> m_parent;
+  std::shared_ptr<QuadTree> parent_;
   const size_t max_depth_;
 };

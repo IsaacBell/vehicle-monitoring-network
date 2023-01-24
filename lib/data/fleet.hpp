@@ -4,13 +4,19 @@
 class Fleet
 {
 public:
-  void insert(double lat, double lon, Vehicle &vehicle)
+  Fleet(User &owner) : ownerUuid_(owner.uuid()) {}
+
+  std::string_view uuid() { return uuid_; }
+  std::string_view ownerUuid() { return ownerUuid_; }
+
+  void insert(double lat, double lon, Vehicle &vehicle) { tree.insert(lat, lon, vehicle); }
+
+  void insert(double lat, double lon, Diagnostic &diag)
   {
-    vehicle.fleetUuid_ = uuid;
+    Vehicle vehicle(diag, *this);
+    vehicle.save();
     tree.insert(lat, lon, vehicle);
   }
-
-  Fleet(User &owner) : ownerUuid_(owner.uuid) {}
 
 private:
   using PointType = boost::geometry::model::point<T, 2, boost::geometry::cs::cartesian>;
@@ -18,6 +24,6 @@ private:
 
   QuadTree<Vehicle &> tree(BoxType(PointType(0, 0), PointType(100, 100)), 10);
 
-  std::string_view uuid;
-  std::string_view ownerUuid;
+  std::string_view uuid_;
+  std::string_view ownerUuid_;
 };

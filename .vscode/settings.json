@@ -60,6 +60,8 @@
     "variant": "cpp",
     "vector": "cpp",
     "algorithm": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "numeric": "cpp",
+    "random": "cpp"
   }
 }

@@ -11,14 +11,19 @@
     }
 */
 
-// Singleton, compile-time lookup
-// It's worth noting that the singleton pattern isn't really needed bcs. the method is static and the
+// The singleton pattern isn't really needed bcs. the methods are static and the
 // array is constexpr, so the method and array only exist at compile-time
 
 template <typename Code = std::string_view, typename Description = std::string_view>
 class Obd2Dictionary
 {
 private:
+    static constexpr std::pair<Code, Description> diagnostic_attribute_types[] = {
+        {"fuelLevel", "int"},
+        {"speed", "double"},
+        {"engineRpm", "double"},
+    };
+
     static constexpr std::pair<Code, Description> codes[] = {
         {"P0001", "Fuel Volume Regulator Control Circuit/Open"},
         {"P0002", "Fuel Volume Regulator Control Circuit Range/Performance"},
@@ -37,15 +42,19 @@ private:
     Obd2Dictionary() = default;
 
 public:
+    static constexpr Description lookup_attribute_type(const Code &code)
+    {
+        for (const auto &[type, description] : diagnostic_attribute_types)
+            if (type == code)
+                return description;
+        return {};
+    }
+
     static constexpr Description lookup(const Code &code)
     {
         for (const auto &[dtc, description] : codes)
-        {
             if (dtc == code)
-            {
                 return description;
-            }
-        }
         return {};
     }
 };
