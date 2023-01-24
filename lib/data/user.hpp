@@ -35,9 +35,9 @@ public:
     return Cassandra.save(*this);
   }
 
-  u_int8_t zipcode() const { return zipcode_; }
-  double lat() const { return lat_; }
-  double lon() const { return lon_; }
+  const u_int8_t zipcode() const { return zipcode_; }
+  const double lat() const { return lat_; }
+  const double lon() const { return lon_; }
   const std::string &username() const { return username_; }
   const std::string &email() const { return email_; }
   const std::string &address() const { return address_; }
