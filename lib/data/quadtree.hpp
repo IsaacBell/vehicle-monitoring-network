@@ -65,9 +65,9 @@ public:
   {
     if (uuidLookup_.count(record.uuid()) &&auto uuid = uuidLookup_[record.uuid()])
     {
-      const auto point = record.uuid();
-      boost::geometry::set<BOOST_GEO_RIGHT::value>(uuidLookup_[point], x);
-      boost::geometry::set<BOOST_GEO_LEFT::value>(uuidLookup_[point], y);
+      const auto point = uuidLookup_[record.uuid()];
+      boost::geometry::set<BOOST_GEO_X_AXIS::value>(point, x);
+      boost::geometry::set<BOOST_GEO_Y_AXIS::value>(point, y);
     }
     return false;
   }

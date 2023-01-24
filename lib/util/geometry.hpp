@@ -11,13 +11,13 @@ struct Factorial<0>
 };
 
 template <>
-struct BOOST_GEO_RIGHT
+struct BOOST_GEO_Y_AXIS
 {
   static constexpr int value = 1;
 }
 
 template <>
-struct BOOST_GEO_LEFT
+struct BOOST_GEO_X_AXIS
 {
   static constexpr int value = 0;
 }
