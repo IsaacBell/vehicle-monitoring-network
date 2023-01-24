@@ -229,6 +229,9 @@ OBD2-Reader_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 OBD2-Reader_SOURCE_DIR:STATIC=/Users/isaac/Documents/obd2-reader/lib
 
+//The directory containing a CMake configuration file for boost_geometry.
+boost_geometry_DIR:PATH=boost_geometry_DIR-NOTFOUND
+
 //The directory containing a CMake configuration file for boost_headers.
 boost_headers_DIR:PATH=/opt/homebrew/lib/cmake/boost_headers-1.81.0
 
@@ -339,7 +342,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=3
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
@@ -383,7 +386,7 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding Boost
-FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/opt/homebrew/lib/cmake/Boost-1.81.0/BoostConfig.cmake][cfound components: system program_options ][v1.81.0()]
+FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/opt/homebrew/lib/cmake/Boost-1.81.0/BoostConfig.cmake][c ][v1.81.0(1.81.0)]
 //ADVANCED property for variable: boost_headers_DIR
 boost_headers_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: boost_program_options_DIR

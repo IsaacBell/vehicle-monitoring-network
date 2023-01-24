@@ -1,53 +1,79 @@
+#include <map>
+#include <memory>
 #include <vector>
 #include <utility>
+#include "point_with_uuid.hpp"
+#include "../util/geometry.hpp"
+
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/geometries/point.hpp>
 
+using namespace boost::geometry;
+
 /*
-  QuadTree<double> tree(BoxType(PointType(0, 0), PointType(100, 100)), 10);
-  tree.insert(50, 50, "my point");
-
-  struct Report {
-    int id;
-    std::string name;
-    // other fields...
-  };
-
-  QuadTree<Report> tree2(BoxType(PointType(0, 0), PointType(100, 100)), 10);
-  Report report = {1, "report 1"};
-  tree2.insert(50, 50, report);
-
+  See README.md for documentation
 */
 
-template <typename T>
+template <
+    typename CoordinateType,
+    typename RecordType,
+    bool isProd = false,
+    const int MAX_N = std::conditional<isProd, 500, 50>,
+    typename = typename std::enable_if<
+        std::is_arithmetic<CoordinateType>::value>::type>
 class QuadTree
 {
 public:
-  using PointType = boost::geometry::model::point<T, 2, boost::geometry::cs::cartesian>;
-  using BoxType = boost::geometry::model::box<PointType>;
-  using ElementType = std::pair<PointType, T>;
-  using ElementContainer = std::vector<ElementType>;
+  using PointType = PointWithUUID;                        // 2d points
+  using BoxType = boost::geometry::model::box<PointType>; // bounding box
+  using ElementType = std::pair<PointType, RecordType>;   // Ex: {{1,2}, my_var}
+  using ElementContainer = std::vector<std::shared_ptr<ElementType>>;
 
-  QuadTree(const BoxType &b, BoxType b) : box_(b), max_depth_(1000000) {}
-  QuadTree(const BoxType &b, size_t max_depth = 0) : box_(b), max_depth_(max_depth) {}
+  template <typename T> // does the RecordType respond to `.uuid()`
+  using EnableIfHasUuidMemberFunc = std::enable_if_t<std::is_same<decltype(std::declval<T>().uuid()), std::string>::value>;
 
-  bool isRoot() { return parent_ == nullptr; }
+  template <typename T> // does the RecordType respond to `.coords_`
+  using EnableIfHasCoordsMemberVar = std::enable_if_t<std::is_member_object_pointer<decltype(&T::coords_)>::value>;
 
-  double comparableDistance(PointType p)
-  {
-    PointType center;
-    return boost::geometry::distance(p, boost::geometry::return_center(box_));
-  }
+  template <typename T>
+  using EnableIfHasUuidFuncAndCoordsMemberVar = std::enable_if_t<EnableIfHasUuidMemberFunc<T>::value &&
+                                                                 EnableIfHasCoordsMemberVar<T>::value>;
 
-  void insert(T x, T y, T value)
+  QuadTree(const BoxType &b) : box_(b) {}
+
+  bool isRoot() const noexcept { return parent_ == nullptr; }
+
+  CoordinateType comparableDistance(PointType &p) { return boost::geometry::distance(p, boost::geometry::return_center(box_)); }
+
+  template <typename T = RecordType, typename = EnableIfHasUuidFuncAndCoordsMemberVar<T>>
+  bool insert(CoordinateType x, CoordinateType y, RecordType &record)
   {
     PointType point(x, y);
-    elements_.emplace_back(point, value);
+    point.uuid = record.uuid();
+    record.coords_ = make_unique<PointType>(point);
+    elements_.emplace_back(point, record);
+    uuidLookup[uuid] = point;
+    return true;
+  }
+
+  template <typename T = RecordType, typename = EnableIfHasUuidFuncAndCoordsMemberVar<T>>
+  bool insert(RecordType &record) { return insert(record.lat, record.lon, record); }
+
+  template <typename T = RecordType, typename = EnableIfHasUuidFuncAndCoordsMemberVar<T>>
+  bool update(RecordType &record, CoordinateType x, CoordinateType y)
+  {
+    if (uuidLookup_.count(record.uuid()) &&auto uuid = uuidLookup_[record.uuid()])
+    {
+      const auto point = record.uuid();
+      boost::geometry::set<BOOST_GEO_RIGHT::value>(uuidLookup_[point], x);
+      boost::geometry::set<BOOST_GEO_LEFT::value>(uuidLookup_[point], y);
+    }
+    return false;
   }
 
   // return a container of elements contained within the given bounding box
-  ElementContainer search(T xMin, T yMin, T xMax, T yMax)
+  ElementContainer search(CoordinateType xMin, CoordinateType yMin, CoordinateType xMax, CoordinateType yMax)
   {
     ElementContainer result;
     BoxType searchBox(PointType(xMin, yMin), PointType(xMax, yMax));
@@ -84,7 +110,7 @@ public:
 
   ElementType findNearestNeighbor(PointType point, size_t current_depth = 0)
   {
-    if (elements_.empty() || current_depth >= max_depth_)
+    if (elements_.empty() || current_depth >= MAX_N)
       return {};
 
     ElementType nearestNeighbor;
@@ -104,7 +130,7 @@ public:
     {
       if (child)
       {
-        ElementType candidate = child->findNearestNeighbor(point, max_depth_, current_depth + 1);
+        ElementType candidate = child->findNearestNeighbor(point, MAX_N, current_depth + 1);
         if (candidate.first == PointType())
         {
           continue;
@@ -125,6 +151,6 @@ private:
   BoxType box_;
   ElementContainer elements_;
   std::array<std::shared_ptr<QuadTree>, 4> children_;
-  std::shared_ptr<QuadTree> parent_;
-  const size_t max_depth_;
+  std::map<std::string_view, PointType &> uuidLookup_;
+  std::shared_ptr<QuadTree> parent_ = nullptr;
 };

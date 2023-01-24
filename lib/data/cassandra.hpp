@@ -1,163 +1,161 @@
-#include <boost/property_tree/ptree.hpp>
-#include <cassandra.h>
-#include <stdexcept>
-#include <memory>
-#include <type_traits>
-#include <variant>
-#include <string>
+#include <cqlpp.h>
+#include "diagnostic.hpp"
+#include "vehicle.hpp"
 
+template <bool isProd = false>
 class Cassandra
 {
 public:
-  Cassandra() : cluster_(cass_cluster_new()),
-                session_(cass_session_new())
+  // Singleton
+  static Cassandra &getInstance()
   {
-    connect_future_ = connect_future(cass_session_connect(session_, cluster_));
-    cass_future_wait(connect_future_);
-    CassError rc = cass_future_error_code(connect_future_);
-    if (rc != CASS_OK)
-    {
-      // handle error
-    }
-
-    init_tables();
+    static Cassandra instance;
+    return instance;
   }
 
-  ~Cassandra()
+  bool save(Vehicle &v) { return save_or_update(v.currentDiagnostic(), v.currentDiagnostic().uuid(), "vehicles.diagnostics"); }
+  bool save(Diagnostic &diag) { return save_or_update(diag, diag.uuid(), "vehicles.diagnostics"); }
+
+  void insert_user(const User &user)
   {
-    cass_statement_free(statement);
-    cass_session_free(session_);
-    cass_cluster_free(cluster_);
-    cass_future_free(connect_future_);
+    auto insert = insert_into(users_).value("username", user.username).value("email", user.email).value("address", user.address).value("lat", user.lat).value("lon", user.lon).value("id", user.uuid).value("phone", user.phone);
+    session_.execute(insert);
   }
 
-  static bool insert(Vehicle &vehicle)
+  User get_user(const std::string &uuid)
   {
-    std::tuple<
-        std::string_view,
-        double,
-        double,
-        int>
-        params{vehicle.vehicleId(), vehicle.speed(), vehicle.engineRpm(), vehicle.fuelLevel()};
+    auto select = select_from(users_).where(users_["id"] == uuid);
+    User user;
+    session_.execute(select, user);
+    return user;
+  }
 
-    return insertData(params);
+  void insert_diagnostic(const Diagnostic &diagnostic)
+  {
+    auto insert = insert_into(diagnostics_).value("vehicle_id", diagnostic.vehicleId).value("speed", diagnostic.speed).value("engine_rpm", diagnostic.engineRpm).value("fuel_level", diagnostic.fuelLevel).value("id", diagnostic.uuid);
+    session_.execute(insert);
+  }
+
+  Diagnostics get_diagnostic(const std::string &uuid) const
+  {
+    auto select = select_from(diagnostics_).where(diagnostics_["id"] == uuid);
+    Diagnostics diagnostic;
+    session_.execute(select, diagnostic);
+    return diagnostic;
   }
 
 private:
-  CassCluster cluster_;
-  CassSession session_;
-  CassFuture connect_future_;
+  cqlpp::Session session_;
+  cqlpp::Map<User> users_;
+  cqlpp::Map<Diagnostics> diagnostics_;
 
-  void init_tables()
+  // Singleton
+  Cassandra(const Cassandra &) = delete;
+  Cassandra &operator=(const Cassandra &) = delete;
+
+  Cassandra(
+      const std::string host = getenv("CASSANDRA_HOST") || "127.0.0.1",
+      int port = getenv("CASSANDRA_PORT" || 9042))
   {
-    createKeyspace("vehicles");
-    if (!create_table("vehicles.diagnostics", "vehicle_id text", "speed double", "engine_rpm double", "fuel_level int"))
-      throw std::runtime_error("could not instantiate table vehicle.diagnostics");
+    session_.connect(host, port);
+
+    cqlpp::Map<User>
+        users_;
+    users_["users"]["attributes"] = {
+        {"username", &User::username},
+        {"email", &User::email},
+        {"address", &User::address},
+        {"lat", &User::lat},
+        {"lon", &User::lon},
+        {"id", &User::uuid},
+        {"phone", &User::phone}};
+
+    cqlpp::Map<Diagnostic> diagnostics_;
+    diagnostics_["vehicles"]["diagnostics"] = {
+        {"vehicle_id", &Diagnostics::vehicleId},
+        {"speed", &Diagnostics::speed},
+        {"engine_rpm", &Diagnostics::engineRpm},
+        {"fuel_level", &Diagnostics::fuelLevel},
+        {"id", &Diagnostics::uuid}};
   }
 
   /*
+    Examples:
+    User user;
+    user.username = "John Doe";
+    user.email = "john.doe@example.com";
+    save_or_update(user, user.uuid, "users.attributes");
 
-    Example:
-    std::tuple<int, std::string, double, std::string> params = { 1, "hello", 2.5, "2022-01-01 00:00:00"};
-    Cassandra.insertData(params);
-
-
-    Make sure that the number of elements in the tuple is the same
-    as the number of columns in the table and
-    the types of the elements match the types of the columns in the table,
-    otherwise you will get a type mismatch error
+    Diagnostics diagnostic;
+    diagnostic.speed = 50;
+    diagnostic.engineRpm = 2000;
+    diagnostic.fuelLevel = 30;
+    save_or_update(diagnostics, diagnostics.uuid, "vehicles.diagnostics");
   */
-  template <typename... Args>
-  static bool insertData(Args... args)
+  template <typename RecordType, typename PrimaryKeyType>
+  bool save_or_update(RecordType &record, PrimaryKeyType primary_key, const std::string_view &table)
   {
-    std::string insert_query = "INSERT INTO vehicles VALUES (" + std::string(std::tuple_size<decltype(params)>::value, '?') + ")";
-    CassStatement *insert_statement = cass_statement_new(insert_query.c_str(), std::tuple_size<decltype(params)>::value);
-    std::apply([&](auto &&...args)
-               {
-    int i = 0;
-    (std::visit([&](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, int>) {
-            cass_statement_bind_int32(insert_statement, i, arg);
-        }
-        else if constexpr (std::is_same_v<T, double>) {
-            cass_statement_bind_double(insert_statement, i, arg);
-        }
-        else if constexpr (std::is_same_v<T, std::string>) {
-            cass_statement_bind_string(insert_statement, i, arg.c_str());
-        }
-        else if constexpr (std::is_same_v<T, std::string_view>) {
-            cass_statement_bind_string(insert_statement, i, arg.c_str());
-        }
-        ++i;
-    }, args)... },
-               params);
-
-    CassFuture *insert_future = cass_session_execute(session_, insert_statement);
-
-    /* Wait for the insert to complete */
-    cass_future_wait(insert_future);
-
-    /* Handle any insert errors */
-    CassError insert_error = cass_future_error_code(insert_future);
-    if (insert_error != CASS_OK)
+    auto map = cqlpp::Map<RecordType>();
+    map[table] = {
+        {"id", &RecordType::uuid}};
+    // Check if the record already exists in the table
+    auto select = select_from(map).where(map["id"] == primary_key);
+    auto result = session_.execute(select);
+    if (result.next())
     {
-      std::cerr << "Unable to insert data: " << cass_error_desc(insert_error) << "\n";
-      return false;
+      auto update = update(map).set(map["id"] = primary_key);
+
+      auto future = session_.execute(update);
+      future.wait();
+      if (future.error())
+        return false; // todo - log error
+      return true;
+    }
+    else
+    {
+      auto insert = insert_into(map).value("id", primary_key);
+
+      auto future = session_.execute(insert);
+      future.wait();
+      if (future.error())
+        return false; // todo - log error
+      return true;
     }
 
-    return true;
-  }
-
-  /*
-    Example:
-    std::string_view table = "vehicle.diagnostics";
-    create_table(table, "vehicle_id text", "speed double", "engine_rpm double", "fuel_level int");
-  */
-  template <typename... Args>
-  static bool createTable(std::string_view &table, Args... args)
-  {
-    std::string columns = (args + ", ")...;
-    columns.pop_back();
-    columns.pop_back();
-    std::string create_table_query = "CREATE TABLE IF NOT EXISTS " + table.data() + " (id uuid PRIMARY KEY, " + columns + ");";
-    CassStatement *create_table_statement = cass_statement_new(create_table_query.c_str(), 0);
-    CassFuture *create_table_future = cass_session_execute(session, create_table_statement);
-    /* Wait for the query to complete */
-    cass_future_wait(create_table_future);
-
-    /* Check for errors */
-    CassError create_table_error = cass_future_error_code(create_table_future);
-    if (create_table_error != CASS_OK)
-    {
-      std::cerr << "Unable to create table: " << cass_error_desc(create_table_error) << std::endl;
-      return false;
-    }
-    /* Clean up */
-    cass_future_free(create_table_future);
-    cass_statement_free(create_table_statement);
     return false;
   }
 
-  static bool createKeyspace(std::string_view &keyspace)
+  void Cassandra::create_keyspace(const std::string &keyspace)
   {
-    CassFuture *create_keyspace_future = NULL;
-    CassStatement *create_keyspace_statement = NULL;
-    create_keyspace_statement = cass_statement_new("CREATE KEYSPACE IF NOT EXISTS vehicles WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};", 0);
-    create_keyspace_future = cass_session_execute(session, create_keyspace_statement);
-    cass_future_wait(create_keyspace_future);
-
-    /* Check for errors */
-    CassError create_keyspace_error = cass_future_error_code(create_keyspace_future);
-    if (create_keyspace_error != CASS_OK)
+    std::string cql;
+    if constexpr (isProd)
+      cql = "CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH replication = {'class': 'NetworkTopologyStrategy', 'replication_factor': '3' };";
+    else
+      cql = "CREATE KEYSPACE IF NOT EXISTS " + keyspace + " WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1' };";
+    cqlpp::Future future = session.execute(cql);
+    future.wait();
+    if (future.error())
     {
-      std::cerr << "Unable to create keyspace: " << cass_error_desc(create_keyspace_error) << "\n";
-      return false;
+      std::cout << "Error creating keyspace: " << future.error().message() << "\n";
     }
-
-    /* Clean up */
-    cass_future_free(create_keyspace_future);
-    cass_statement_free(create_keyspace_statement);
-    return false;
+    else
+    {
+      std::cout << "Keyspace created successfully\n";
+    }
   }
-}
+
+  void Cassandra::create_table(const std::string &table, const std::string &primary_key, cqlpp::DataType primary_key_type)
+  {
+    std::string cql = "CREATE TABLE IF NOT EXISTS " + table + "(" + primary_key + " " + primary_key_type.name() + " PRIMARY KEY);";
+    cqlpp::Future future = session.execute(cql);
+    future.wait();
+    if (future.error())
+    {
+      std::cout << "Error creating table: " << future.error().message() << "\n";
+    }
+    else
+    {
+      std::cout << "Table created successfully\n";
+    }
+  }
+};

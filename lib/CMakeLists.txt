@@ -1,10 +1,22 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 project(OBD2-Reader)
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(Boost REQUIRED COMPONENTS system program_options geometry)
+# todo - temp
+include_directories("/opt/homebrew/Cellar/boost/1.81.0_1/include/")
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/Cellar/boost/1.81.0_1")
+
+set(BOOST_ROOT "/opt/homebrew/Cellar/boost/1.81.0_1")
+set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include/")
+set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
+set(Boost_NO_SYSTEM_PATHS TRUE)
+find_package(Boost 1.81.0 COMPONENTS geometry REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIRS})
+
+find_package(Boost COMPONENTS system program_options geometry REQUIRED)
 
 set(Data_SOURCES
     data/obd2_dictionary.hpp

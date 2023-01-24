@@ -1,8 +1,14 @@
-set(Data_SOURCES
+cmake_minimum_required(VERSION 3.16)
+
+add_library(Data
+    cassandra.hpp
+    diagnostic.hpp
+    fleet.hpp
     obd2_dictionary.hpp
-    # obd2_translator.hpp
-    # Add any additional data source files here
+    quadtree.hpp
+    user.hpp
+    vehicle.hpp
 )
 
-add_library(Data ${Data_SOURCES})
 target_compile_options(Data PRIVATE -std=c++20)
+

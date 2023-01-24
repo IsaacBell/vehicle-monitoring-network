@@ -4,12 +4,16 @@
 #include <boost/property_tree/ptree.hpp>
 #include "quadtree.hpp"
 #include "cassandra.hpp"
+#include "point_with_uuid.hpp"
 
 std::cout << std::fixed << std::setprecision(9) << std::left;
 
+template <typename CoordinateType = double>
 class Vehicle
 {
 public:
+  unique_ptr<CoordinateType> coords_;
+
   std::string_view ownerUuid() { return fleet().ownerUuid_; }
 
   Vehicle(Fleet &fleet) : fleetUuid(fleet.uuid()) {}
@@ -54,6 +58,7 @@ public:
 
 private:
   std::vector<unique_ptr<Diagnostic>> diags_;
+  std::unique_ptr<PointWithUuid> coords_;
   std::string_view uuid_;
   std::string_view fleetUuid_;
   std::chrono::time_point last_active_at_;
