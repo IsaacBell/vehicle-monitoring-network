@@ -1,6 +1,6 @@
-Vehicle fleet monitoring and management network.
+Vehicle fleet monitoring and management network, written in C++, using Boost and Cassandra.
 
-This kind of system is extremely write-heavy, making Cassandra a natural database choice. For more on the reasoning behind this, see [Why Cassandra?](#docs/cassandra.md#why-cassandra)
+By nature, a monitoring system will be extremely write-heavy, making Cassandra a natural database choice. For more on the reasoning behind this, see [Why Cassandra?](#docs/cassandra.md#why-cassandra)
 
 Server code is in the lib/ folder.
 
