@@ -65,7 +65,56 @@ public:
     cass_future_free(connect_future_);
   }
 
-  static User &findUser(std::string_view &uuid) { return find("users.attributes", "uuid", uuid.data()); }
+  static User &findUser(std::string_view &uuid) { return find<User>("users.attributes", "uuid", uuid.data()); }
+  
+  template<typename T>
+  static T &find(std::string_view &table, std::string_view &uuid) {
+    CassCluster* cluster = cass_cluster_new();
+    CassSession* session = cass_session_new();
+    CassFuture* connect_future = cass_session_connect(session, cluster);
+    cass_future_wait(connect_future);
+    CassError connect_error = cass_future_error_code(connect_future);
+    if (connect_error != CASS_OK) {
+        // handle error
+        cass_future_free(connect_future);
+        cass_session_free(session);
+        cass_cluster_free(cluster);
+        return nullptr;
+    }
+
+    const auto tableName = "SELECT * FROM " + table.data() + " WHERE id = ?";
+    CassStatement* statement = cass_statement_new(, 1);
+    CassUuid id;
+    cass_uuid_from_string(uuid.data(), &id);
+    cass_statement_bind_uuid(statement, 0, id);
+    CassFuture* query_future = cass_session_execute(session, statement);
+    cass_future_wait(query_future);
+    CassError query_error = cass_future_error_code(query_future);
+    if (query_error != CASS_OK) {
+        // handle error
+        cass_future_free(query_future);
+        cass_statement_free(statement);
+        cass_future_free(connect_future);
+        cass_session_free(session);
+        cass_cluster_free(cluster);
+        return nullptr;
+    }
+
+    const CassResult* result = cass_future_get_result(query_future);
+    CassIterator* iterator = cass_iterator_from_result(result);
+    User user;
+    if (cass_iterator_next(iterator)) {
+        const CassRow* row = cass_iterator_get_row(iterator);
+        // populate object with row data
+    } else {
+        // handle case where not found
+    }
+    cass_iterator_free(iterator);
+    cass_result_free(result);
+    cass_future_free(query_future);
+    cass_statement_free(statement);
+    return user;
+}
 
   static bool insert(Vehicle &vehicle)
   {
